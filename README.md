@@ -42,7 +42,7 @@ Live Control of a Servo via a GUI using pyFirmata. Records a history of servo sw
   * Reverse - swap "Start" and "End"
   * Perform Selected - perform the sweep selected in the "Sweep History" window (second screenshot)
   * Perform History - perform all the sweeps in the order they appear in the "Sweep History" window (second screenshot)
-  * Export CSV - exports the sweeps in the order they appear in the "Sweep History" window to a CSV file called "servo_history.csv"
+  * Export CSV - exports the sweeps in the order they appear in the "Sweep History" window to a CSV file called `servo_history.csv`. This CSV can be used as input to servo_sketch_generator.py
 * Buttons in the "Sweep History" window:
   * Remove Action - deletes the selected line representing a previously performed servo sweep
   * Move Up - moves the selected line upwards. This will change the order the sweeps are performed by "Perform History"
