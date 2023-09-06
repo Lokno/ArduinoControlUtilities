@@ -3,13 +3,13 @@ Utilities designed to enable controlling GPIO output from a microcontroller with
 
 ## Utilities
 
-* gensketch.py - Translates a CSV table into an arduino sketch that performs the represented effects
+* gensketch.py - Translates a CSV table into an Arduino sketch that performs the represented effects
 * pyfirmata_servo.py - Live Control of a Servo via a GUI using pyFirmata
-* servo_sketch_generator.py - Translates a CSV table into an arduino sketch that performs a series of servo sweeps
+* servo_sketch_generator.py - Translates a CSV table into an Arduino sketch that performs a series of servo sweeps
 
 ## pyfirmata_servo.py
 
-Live Control of a Servo via a GUI using pyFirmata. Records a history of servo sweeps which can be played back or export to CSV.
+Live Control of a Servo via a GUI using pyFirmata. Records a history of servo sweeps which can be played back or exported to CSV.
 
 ![Screenshot 2023-09-06 001433](https://github.com/Lokno/ArduinoControlUtilities/assets/2483797/30635c8d-d640-4ba1-bc51-21d0bdec810a)
 
@@ -58,4 +58,8 @@ Live Control of a Servo via a GUI using pyFirmata. Records a history of servo sw
   * Ease Out - Period at the end of the sweep to deccelerate (cubic)
   * Update Interval - Interval to update the positon of the servo
 
-  
+  ## servo_sketch_generator.py
+
+  Translates a CSV table representing a sequence of servo sweeps to an Arduino sketch.
+  The generated Arduino sketch uses Renaud Bédard's coroutine library to handle concurrent operation of multiple servos (https://github.com/renaudbedard/littlebits-arduino/tree/master/Libraries/Coroutines).
+  CSV exported from `pyfirmata_servo.py` can be used directly as input.
