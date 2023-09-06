@@ -18,7 +18,7 @@ Live Control of a Servo via a GUI using pyFirmata. Records a history of servo sw
 ### Dependencies
 * Python 3
 * pyFirmata (https://github.com/tino/pyFirmata)
-* tkDial
+* tkDial (https://github.com/Akascape/TkDial)
 
 ### Setup
 * Install Python 3
