@@ -69,5 +69,39 @@ CSV exported from `pyfirmata_servo.py` can be used directly as input.
 ### Dependencies
 * Python 3
 * python-benedict
-
 * appdirs
+* pyFirmata (For "Perform Scenes" feature)
+
+### Interface
+* Select Routine CSV file - path to a CSV file with the sequence of servo sweeps
+* Select ServoInfo CSV file (optional) - path to a CSV file with specifications for each servo
+* Select output directory - path to an existing directory to place the sketch.
+* Use motion Sensor (checkbox) - whether to check on a input pin for motion before executing the routine
+* Pin - input pin to listen for motion. Debouncing not addressed, HIGH = motion
+* Enter output file name - What to call the output sketch (not a path)
+* Write Sketch (button) - Generate the Arduino sketch
+* Perform Scenes - Connect to serial port and perform the sequence of sweeps using pyFirmata
+* Port - serial port of a connected microcontroller running StandardFirmata or ServoFirmata
+
+### Routine CSV File Format (column order is not important)
+| Scene |	Name  |	Pin   |	Position |	Time  |	Ease In |	Ease Out |
+| ----- | ----- | ----- | -------- | ----- | ------- | -------- |
+| Integer | String | Integer | Integer | Integer | Integer | Integer |
+
+* Scene - Integer id of scene during which the sweep should be performed (Scene 0 sets the reset sweep and starting position)
+* Name - The string name of the sweep (used in the script for readability
+* Pin - The output pin on the microcontroller for the servo. Only one sweep should be run on each pin during the same scene
+* Position - End position of the sweep. The starting position is implied by the position of that servo the end of the the previous scene
+* Time - Duration of the sweep. The length of a scene will be the largest duration of all the sweeps in that scene
+* Ease In - Time to accelerate (cubic easing)
+* Ease Out - Time to decelerate (cubic easing)
+
+### ServoInfo CSV File Format (column order is not important)
+| Pin   |	Full Sweep  |	Minimum   |	Maximum  |
+| ----- | ----------- | --------- | -------- |
+| Integer | Integer | Integer | Integer |
+
+* Pin - The output pin on the microcontroller for the servo.
+* Full Sweep - The extreme position in degrees the servo is capable of reaching (default: 270)
+* Minimum - The pulse with in microseconds to set the servo to the 0 position (default: 544)
+* Maximum - The pulse width in microseconds to set the servo to the extreme position (default: 2400)
