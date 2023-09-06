@@ -63,3 +63,8 @@ Live Control of a Servo via a GUI using pyFirmata. Records a history of servo sw
 Translates a CSV table representing a sequence of servo sweeps to an Arduino sketch.
 The generated Arduino sketch uses Renaud Bédard's coroutine library to handle concurrent operation of multiple servos (https://github.com/renaudbedard/littlebits-arduino/tree/master/Libraries/Coroutines).
 CSV exported from `pyfirmata_servo.py` can be used directly as input.
+
+### Dependencies
+* Python 3
+* python-benedict
+* appdirs
