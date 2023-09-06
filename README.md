@@ -105,3 +105,7 @@ CSV exported from `pyfirmata_servo.py` can be used directly as input.
 * Full Sweep - The extreme position in degrees the servo is capable of reaching (default: 270)
 * Minimum - The pulse with in microseconds to set the servo to the 0 position (default: 544)
 * Maximum - The pulse width in microseconds to set the servo to the extreme position (default: 2400)
+
+## gensketch.py 
+
+Translates a CSV table into an Arduino sketch that performs the represented effects. The generated Arduino sketch uses Renaud Bédard's coroutine library to handle concurrent operation of multiple servos (https://github.com/renaudbedard/littlebits-arduino/tree/master/Libraries/Coroutines). See the header at the top of the code for details.
