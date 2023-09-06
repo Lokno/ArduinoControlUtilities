@@ -58,8 +58,8 @@ Live Control of a Servo via a GUI using pyFirmata. Records a history of servo sw
   * Ease Out - Period at the end of the sweep to deccelerate (cubic)
   * Update Interval - Interval to update the positon of the servo
 
-  ## servo_sketch_generator.py
+## servo_sketch_generator.py
 
-  Translates a CSV table representing a sequence of servo sweeps to an Arduino sketch.
-  The generated Arduino sketch uses Renaud Bédard's coroutine library to handle concurrent operation of multiple servos (https://github.com/renaudbedard/littlebits-arduino/tree/master/Libraries/Coroutines).
-  CSV exported from `pyfirmata_servo.py` can be used directly as input.
+Translates a CSV table representing a sequence of servo sweeps to an Arduino sketch.
+The generated Arduino sketch uses Renaud Bédard's coroutine library to handle concurrent operation of multiple servos (https://github.com/renaudbedard/littlebits-arduino/tree/master/Libraries/Coroutines).
+CSV exported from `pyfirmata_servo.py` can be used directly as input.
