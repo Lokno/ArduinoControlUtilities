@@ -297,7 +297,8 @@ class SweepSketchGen:
         servo_positions = {}
         for scene_data in self.scenes:
             for sweep in scene_data:
-                servo_positions[int(sweep['Pin'])] = int(sweep['Position'])
+                if sweep['Name'] != 'Delay':
+                    servo_positions[int(sweep['Pin'])] = int(sweep['Position'])
     
         reset_scene = []
         for pin,position in servo_positions.items():
@@ -713,6 +714,20 @@ class FileSelectorGUI:
 
         self.update_message_text(msg, False if success else True)
 
+    # Add a directory to the end of base_path with the
+    # same basename as filename, if isn't already there.
+    # Assumes base_path is a valid directory
+    def create_path(self, base_path, filename):
+        filename_base,_ = os.path.splitext(filename)
+        last_directory = os.path.basename(os.path.normpath(base_path))
+        
+        if last_directory != filename_base:
+            base_path = os.path.join(base_path, filename_base)
+            os.makedirs(base_path, exist_ok=True)
+        
+        complete_path = os.path.join(base_path, filename)
+        return complete_path
+    
     def end_demo(self):
         self.sweep_gen.perform = False
         self.run_button.config(text="Perform Scenes", command=self.live_demo)
@@ -726,7 +741,7 @@ class FileSelectorGUI:
         if success:
             success,msg = self.sweep_gen.validate_dir(output_directory,'Output Directory')
             if success:
-                output_filename = os.path.join(output_directory,output_filename)
+                output_filename = self.create_path(output_directory,output_filename)
                 success,msg = self.sweep_gen.write_sketch( output_filename, self.use_motion.get(), self.motion_pin_entry.get() )
                 if success:
                     self.store_config({
