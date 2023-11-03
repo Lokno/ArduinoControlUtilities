@@ -192,7 +192,7 @@ class ServoTester:
         self.export_csv_button.pack(side=tk.LEFT)
 
         self.dial = Meter(self.window, radius=300, start=0, end=270, start_angle=-90, end_angle=-270, border_width=0, 
-               major_divisions=15, minor_divisions=1, fg="black", text_font="DS-Digital 24",
+               major_divisions=15, minor_divisions=1, fg="grey", text_font="DS-Digital 24",
                scale_color="white", needle_color="red", command = self.move_servo)
 
         self.dial.grid(row=0, column=2, rowspan=10, padx=10, pady=10)
@@ -245,6 +245,9 @@ class ServoTester:
         self.update_marks()
 
         self.history_view = SweepHistory(self.window)
+
+    def map(self, x, in_min, in_max, out_min, out_max):
+        return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
     def on_closing(self):
         self.perform_sweep = False
@@ -324,11 +327,11 @@ class ServoTester:
         if self.servo is not None:
             if self.dial.get() > self.max_angle:
                 self.dial.set(self.max_angle)
-            self.servo.write(self.dial.get())
+            self.servo.write(self.map(self.dial.get(),0.0,self.max_angle,0.0,180.0))
 
     def set_servo_pos(self,p):
         self.dial.set(p)
-        self.servo.write(p)
+        self.servo.write(self.map(p,0.0,self.max_angle,0.0,180.0))
 
     def set_servo(self,pin):
         if pin in self.servos:
@@ -406,13 +409,13 @@ class ServoTester:
 
     def run_sweep_ex(self, pin, port, start, end, duration, ease_in, ease_out):
         if not self.perform_sweep:
-
-           if pin != self.pin:
-               self.set_servo(pin)
    
            if port != self.port:
                self.port = port
                self.connect()
+
+           if pin != self.pin:
+               self.set_servo(pin)
 
            self.update_button.config(state=tk.DISABLED)
            self.reverse_button.config(state=tk.DISABLED)
