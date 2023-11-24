@@ -123,7 +123,7 @@ async def echo(websocket, path):
             board_ctrl.update(data['port'],data)
 
             if write_csv:
-                write_csv_row("output.csv",data)
+                write_csv_row(csv_file_name,data)
 
     except websockets.exceptions.ConnectionClosed as e:
         print(f"Connection closed with {websocket.remote_address}: {e.reason}")
