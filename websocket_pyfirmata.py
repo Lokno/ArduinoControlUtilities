@@ -8,6 +8,7 @@ import websockets
 import pyfirmata
 import json
 import platform
+import argparse
 
 major,minor,_ = platform.python_version_tuple()
 if major != '3':
@@ -101,7 +102,10 @@ class BoardControl:
 
 connected_clients = set()
 board_ctrl = BoardControl()
-write_csv = True
+write_csv = False
+serve_host = "127.0.0.1"
+serve_port = 22300
+csv_file_name = "output.csv"
 
 async def register(websocket):
     connected_clients.add(websocket)
@@ -128,8 +132,30 @@ async def echo(websocket, path):
 
 async def main():
 
-    async with websockets.serve(echo, "127.0.0.1", 22300):
+    async with websockets.serve(echo, serve_host, serve_port):
+        print(f'Serving Websocket at {serve_host}:{serve_port}')
+        if write_csv:
+            print(f'Writing output to {csv_file_name}')
         await asyncio.Future()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Websocket Server to directly control the GPIO output of a microcontroller")
+
+    # Optional arguments
+    parser.add_argument("--host", nargs="?", help="host for websocket (default: 127.0.0.1)")
+    parser.add_argument("-p", "--port", type=int, nargs="?", help="port for websocket (default: 22300)")
+    parser.add_argument("-c", "--csv", nargs="?", help="Optional CSV file for dumping GPIO output values each frame")
+    
+    args = parser.parse_args()
+
+    if args.csv is not None:
+        write_csv = True
+        csv_file_name = args.csv
+
+    if args.host is not None:
+        serve_host = args.host
+
+    if args.port is not None:
+        serve_port = args.port   
+
     asyncio.run(main())
