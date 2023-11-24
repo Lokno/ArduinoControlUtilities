@@ -136,6 +136,6 @@ frame,pin_A,value_A,type_A,pin_B,value_B,type_B,...
     * digital_pwm - digital pin (D2,D3,..) for pwm output (valid values 0-1)
     * analog_pwm  - analog pin  (A0,A1,...) for pwm output (valid values 0-1)
 
-## gensketch.py 
+## gensketch.py (deprecated)
 
 Translates a CSV table into an Arduino sketch that performs the represented effects. The generated Arduino sketch uses Renaud Bédard's coroutine library to handle concurrent operation of multiple servos (https://github.com/renaudbedard/littlebits-arduino/tree/master/Libraries/Coroutines). See the header at the top of the code for details.
