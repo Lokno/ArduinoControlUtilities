@@ -3,10 +3,12 @@ Utilities designed to enable controlling GPIO output from a microcontroller with
 
 ## Utilities
 
-* gensketch.py - Translates a CSV table into an Arduino sketch that performs the represented effects
+* csv_to_sketch.py - Translates a CSV table representing a sequence of GPIO output values to an Arduino Sketch
 * pyfirmata_servo.py - Live Control of a Servo via a GUI using pyFirmata
 * servo_sketch_generator.py - Translates a CSV table into an Arduino sketch that performs a series of servo sweeps
-
+* gensketch.py - Translates a CSV table into an Arduino sketch that performs the represented effects
+* websocket_pyfirmata.py - Websocket server for controlling a microcontroller over serial using PyFirmata
+  
 ## pyfirmata_servo.py
 
 Live Control of a Servo via a GUI using pyFirmata. Records a history of servo sweeps which can be played back or exported to CSV.
