@@ -138,7 +138,11 @@ def generate_arduino_sketch(csv_file,sketch_name,fps):
 
     frame_count = len(fdata)
 
-    arduino_code = '#include <Servo.h>\n'
+    servo_count = sum([1 for pin in pins if pins[pin]["type"] == "servo"])
+
+    arduino_code = ''
+    if servo_count > 0:
+        arduino_code += '#include <Servo.h>\n'
 
     arduino_code += '''
 typedef struct {
@@ -186,15 +190,13 @@ unsigned char next_value( unsigned char* values, CompressionInfo* info )
         compressed_values = compress_zeros(deltas)
         arduino_code += f'const signed char val{pin_name}[{len(compressed_values)}] = {{{",".join([str(v) for v in compressed_values])}}};\n\n'
 
-    arduino_code += 'Servo ' + ','.join([f'servo{pin}' for pin in pins if pins[pin]["type"] == "servo"]) + ';\n\n'
+    if servo_count > 0:
+        arduino_code += 'Servo ' + ','.join([f'servo{pin}' for pin in pins if pins[pin]["type"] == "servo"]) + ';\n\n'
 
     arduino_code += 'unsigned int frame = 0;\n'
     arduino_code += f'unsigned int frame_count = {frame_count};\n'
     arduino_code += 'unsigned long last_frame;\n'
     arduino_code += f'unsigned long target_delta = {int(1000/fps)};\n\n'
-
-    #unsigned int idxA;
-    #unsigned int idxAzero;
 
     arduino_code += 'void setup() {\n'
 
@@ -204,11 +206,11 @@ unsigned char next_value( unsigned char* values, CompressionInfo* info )
 
     for pin in pins:
         if pins[pin]["type"].startswith("analog"):
-             arduino_code += f"  pinMode(A{pin}, OUTPUT);\n"
+             arduino_code += f"    pinMode(A{pins[pin]['pin']}, OUTPUT);\n"
 
     for pin in pins:
         if pins[pin]["type"].startswith("digital"):
-             arduino_code += f"  pinMode({pin}, OUTPUT);\n"
+             arduino_code += f"    pinMode({pins[pin]['pin']}, OUTPUT);\n"
 
     for pin_name,attrib in pins.items():
         arduino_code += f'    accum{pin_name} = init{pin_name};\n'
@@ -236,9 +238,9 @@ unsigned char next_value( unsigned char* values, CompressionInfo* info )
         if pins[pin]["type"] == "servo":
             arduino_code += f"servo{pin}.write(accum{pin});\n"
         elif 'pwm' in pins[pin]["type"]:
-            arduino_code += f"analogWrite({pin}, accum{pin});\n"
+            arduino_code += f"analogWrite({pins[pin]['pin']}, accum{pin});\n"
         else:
-            arduino_code += f"digitalWrite({pin}, accum{pin});\n"
+            arduino_code += f"digitalWrite({pins[pin]['pin']}, accum{pin});\n"
 
     arduino_code += '\n        frame++;\n'
 
