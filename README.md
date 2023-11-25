@@ -3,12 +3,68 @@ Utilities designed to enable controlling GPIO output from a microcontroller with
 
 ## Utilities
 
+* websocket_pyfirmata.py - Websocket server for controlling a microcontroller over serial using PyFirmata
 * csv_to_sketch.py - Translates a CSV table representing a sequence of GPIO output values to an Arduino Sketch
 * pyfirmata_servo.py - Live Control of a Servo via a GUI using pyFirmata
 * servo_sketch_generator.py - Translates a CSV table into an Arduino sketch that performs a series of servo sweeps
 * gensketch.py - Translates a CSV table into an Arduino sketch that performs the represented effects
-* websocket_pyfirmata.py - Websocket server for controlling a microcontroller over serial using PyFirmata
-  
+
+## csv_to_sketch.py
+
+Translates a CSV table representing a sequence of GPIO output values to an Arduino Sketch
+
+Uses zero compression to save memory
+
+### Dependencies
+* Python 3
+* python-benedict
+* appdirs
+
+### CSV File Schema (in no particular order):
+
+frame,pin_A,value_A,type_A,pin_B,value_B,type_B,...
+
+* frame (integer) - 1-indexed frame number
+  - file must have a complete set of frames 1 through n
+  - n will be determined automatically from the largest frame number in the file
+* pin_ (integer)   - output pin number on microcontroller
+* value_ (integer) - output value to go out on pin on this frame
+* type_ (string)   - type of pin, assumed to be a constant
+  - Valid Types
+    * servo       - A connected servo on the pin. Uses Arduino Servo library (valid values 0-180)
+    * digital     - digital pin (D2,D3,..) for digital output (valid values 0-1)
+    * analog      - analog pin  (A0,A1,...) for digital output (valid values 0-1)
+    * digital_pwm - digital pin (D2,D3,..) for pwm output (valid values 0-1)
+    * analog_pwm  - analog pin  (A0,A1,...) for pwm output (valid values 0-1)
+   
+## websocket_pyfirmata.py
+
+Creates a websocket server for interactively controlling a microcontroller over serial using PyFirmata.
+Intended for use with Pixel Composer using the WebSocket Sender node: https://makham.itch.io/pixel-composer
+
+### Dependencies
+* Python 3
+* appdirs
+* argparse
+* pyfirmata
+* tkinter (for GUI when opened without arguments)
+
+Expects to receive the following data values:
+
+* port (string)   - string of serial port where microcontroller is connected
+* frame (integer) - 1-indexed frame number
+  - file must have a complete set of frames 1 through n
+  - n will be determined automatically from the largest frame number in the file
+* pin_ (integer)   - output pin number on microcontroller
+* value_ (integer) - output value to go out on pin on this frame
+* type_ (string)   - type of pin, assumed to be a constant
+  - Valid Types
+    * servo       - A connected servo on the pin. Uses Arduino Servo library (valid values 0-180)
+    * digital     - digital pin (D2,D3,..) for digital output (valid values 0-1)
+    * analog      - analog pin  (A0,A1,...) for digital output (valid values 0-1)
+    * digital_pwm - digital pin (D2,D3,..) for pwm output (valid values 0-1)
+    * analog_pwm  - analog pin  (A0,A1,...) for pwm output (valid values 0-1)
+
 ## pyfirmata_servo.py
 
 Live Control of a Servo via a GUI using pyFirmata. Records a history of servo sweeps which can be played back or exported to CSV.
@@ -107,34 +163,6 @@ CSV exported from `pyfirmata_servo.py` can be used directly as input.
 * Full Sweep - The extreme position in degrees the servo is capable of reaching (default: 270)
 * Minimum - The pulse with in microseconds to set the servo to the 0 position (default: 544)
 * Maximum - The pulse width in microseconds to set the servo to the extreme position (default: 2400)
-
-## csv_to_sketch.py
-
-Translates a CSV table representing a sequence of GPIO output values to an Arduino Sketch
-
-Uses zero compression to save memory
-
-### Dependencies
-* Python 3
-* python-benedict
-* appdirs
-
-### CSV File Schema (in no particular order):
-
-frame,pin_A,value_A,type_A,pin_B,value_B,type_B,...
-
-* frame (integer) - 1-indexed frame number
-  - file must have a complete set of frames 1 through n
-  - n will be determined automatically from the largest frame number in the file
-* pin_ (integer)   - output pin number on microcontroller
-* value_ (integer) - output value to go out on pin on this frame
-* type_ (string)   - type of pin, assumed to be a constant
-  - Valid Types
-    * servo       - A connected servo on the pin. Uses Arduino Servo library (valid values 0-180)
-    * digital     - digital pin (D2,D3,..) for digital output (valid values 0-1)
-    * analog      - analog pin  (A0,A1,...) for digital output (valid values 0-1)
-    * digital_pwm - digital pin (D2,D3,..) for pwm output (valid values 0-1)
-    * analog_pwm  - analog pin  (A0,A1,...) for pwm output (valid values 0-1)
 
 ## gensketch.py (deprecated)
 
