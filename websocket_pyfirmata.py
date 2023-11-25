@@ -10,6 +10,7 @@ import json
 import platform
 import argparse
 import logging
+from serial import serialutil
 
 major,minor,_ = platform.python_version_tuple()
 if major != '3':
@@ -35,8 +36,14 @@ class BoardControl:
             if self.board is not None:
                 self.board.exit()
             self.port = port
-            self.board = pyfirmata.Arduino(self.port)
+            try:
+                self.board = pyfirmata.Arduino(self.port)
+            except serialutil.SerialException:
+                self.board = None
             self.io = {}
+
+        if self.board is None:
+            return
 
         gdata = {}
 
@@ -151,6 +158,8 @@ class WebSocketServer:
 
         if 'port' in keys:
             idx = keys.index('port')
+            keys = list(keys)
+            values = list(values)
             keys.pop(idx)
             values.pop(idx)
     
