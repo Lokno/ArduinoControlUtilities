@@ -148,6 +148,11 @@ class WebSocketServer:
         d = zip(data.keys(),data.values())
         d = sorted(d)
         keys,values = zip(*d)
+
+        if 'port' in keys:
+            idx = keys.index('port')
+            keys.pop(idx)
+            values.pop(idx)
     
         if not os.path.exists(self.csv_file_name):
             with open(filename,'w') as f:

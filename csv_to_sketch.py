@@ -34,6 +34,7 @@ def get_deltas(arr):
 
 def compress_zeros(arr):
     compressed_arr = []
+    zero_count_arr = []
     count = 0
 
     for element in arr:
@@ -42,15 +43,15 @@ def compress_zeros(arr):
         else:
             if count > 0:
                 compressed_arr.append(0)
-                compressed_arr.append(count)
+                zero_count_arr.append(count)
                 count = 0
             compressed_arr.append(element)
 
     if count > 0:
         compressed_arr.append(0)
-        compressed_arr.append(count)
+        zero_count_arr.append(count)
 
-    return compressed_arr
+    return compressed_arr,zero_count_arr
 
 def validate_csv(file,field_name):
     success = True
@@ -148,18 +149,20 @@ def generate_arduino_sketch(csv_file,sketch_name,fps):
 typedef struct {
     int ypos;
     int xpos;
+    int zpos;
 } CompressionInfo;
 
-unsigned char next_value( unsigned char* values, CompressionInfo* info )
+unsigned char next_value( unsigned char* values, unsigned short* zeroes, CompressionInfo* info )
 {
     signed char ret = 0;
     if( values[info->ypos] == 0 ) // in zero sequence
     {
         info->xpos++;
-        if( info->xpos == values[info->ypos+1] )
+        if( info->xpos == zeroes[info->zpos] )
         {
             info->xpos = 0;
-            info->ypos+=2;
+            info->ypos++;
+            info->zpos++;
         }
     }
     else
@@ -185,10 +188,17 @@ unsigned char next_value( unsigned char* values, CompressionInfo* info )
 
     arduino_code += '\n// Compressed Deltas\n'
 
+    zero_count_arrays = [];
+
     for pin_name,attrib in pins.items():
         deltas = get_deltas(pins[pin_name]["values"])
-        compressed_values = compress_zeros(deltas)
+        compressed_values,zero_counts = compress_zeros(deltas)
+
+        zero_count_arrays.append((pin_name,zero_counts))
         arduino_code += f'const signed char val{pin_name}[{len(compressed_values)}] = {{{",".join([str(v) for v in compressed_values])}}};\n\n'
+
+    for pin_name,zero_counts in zero_count_arrays:
+        arduino_code += f'const unsigned int zero{pin_name}[{len(zero_counts)}] = {{{",".join([str(v) for v in zero_counts])}}};\n\n'
 
     if servo_count > 0:
         arduino_code += 'Servo ' + ','.join([f'servo{pin}' for pin in pins if pins[pin]["type"] == "servo"]) + ';\n\n'
@@ -216,7 +226,7 @@ unsigned char next_value( unsigned char* values, CompressionInfo* info )
         arduino_code += f'    accum{pin_name} = init{pin_name};\n'
 
     for pin_name,attrib in pins.items():
-        arduino_code += f'    info{pin_name}.ypos = info{pin_name}.xpos = 0;\n'
+        arduino_code += f'    info{pin_name}.xpos = info{pin_name}.ypos = info{pin_name}.zpos = 0;\n'
 
     arduino_code += '\n    last_frame = millis();'
 
@@ -231,7 +241,7 @@ unsigned char next_value( unsigned char* values, CompressionInfo* info )
 '''
 
     for pin_name,attrib in pins.items():
-        arduino_code += f'        accum{pin_name} += next_value(val{pin_name},&info{pin_name});\n'
+        arduino_code += f'        accum{pin_name} += next_value(val{pin_name},zero{pin_name},&info{pin_name});\n'
 
     for pin in pins:
         arduino_code += ' ' * 8
@@ -248,7 +258,7 @@ unsigned char next_value( unsigned char* values, CompressionInfo* info )
     for pin_name,attrib in pins.items():
         arduino_code += f'            accum{pin_name} = init{pin_name};\n'
     for pin_name,attrib in pins.items():
-        arduino_code += f'            info{pin_name}.ypos = info{pin_name}.xpos = 0;\n'
+        arduino_code += f'            info{pin_name}.xpos = info{pin_name}.ypos = info{pin_name}.zpos = 0;\n'
     
     arduino_code += '        }\n    }\n}\n'
 
