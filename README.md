@@ -13,6 +13,8 @@ Utilities designed to enable controlling GPIO output from a microcontroller with
 
 Translates a CSV table representing a sequence of GPIO output values to an Arduino Sketch
 
+![Screenshot 2023-11-25 230808](https://github.com/Lokno/ArduinoControlUtilities/assets/2483797/895eb9e5-99fb-440d-8a9c-eabde1e146c5)
+
 Uses zero compression to save memory
 
 ### Dependencies
@@ -38,6 +40,8 @@ frame,pin_A,value_A,type_A,pin_B,value_B,type_B,...
     * analog_pwm  - analog pin  (A0,A1,...) for pwm output (valid values 0-1)
    
 ## websocket_pyfirmata.py
+
+![Screenshot 2023-11-25 230803](https://github.com/Lokno/ArduinoControlUtilities/assets/2483797/2bd1ce8a-f942-4cf3-91a0-d82e118efe5b)
 
 Creates a websocket server for interactively controlling a microcontroller over serial using PyFirmata.
 Intended for use with Pixel Composer using the WebSocket Sender node: https://makham.itch.io/pixel-composer
