@@ -32,4 +32,12 @@ if %errorlevel% neq 0 (
     echo Installation completed successfully. 
 )
 
+echo Installing websockets package via pip...
+pip install websockets
+if %errorlevel% neq 0 (
+    echo An error occurred during installation.
+) else (
+    echo Installation completed successfully. 
+)
+
 pause
