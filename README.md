@@ -3,11 +3,10 @@ Utilities designed to enable controlling GPIO output from a microcontroller with
 
 ## Utilities
 
-* websocket_pyfirmata.py - Websocket server for controlling a microcontroller over serial using PyFirmata
 * csv_to_sketch.py - Translates a CSV table representing a sequence of GPIO output values to an Arduino Sketch
+* websocket_pyfirmata.py - Websocket server for controlling a microcontroller over serial using PyFirmata
 * pyfirmata_servo.py - Live Control of a Servo via a GUI using pyFirmata
 * servo_sketch_generator.py - Translates a CSV table into an Arduino sketch that performs a series of servo sweeps
-* gensketch.py - Translates a CSV table into an Arduino sketch that performs the represented effects
 
 ## csv_to_sketch.py
 
@@ -167,7 +166,3 @@ CSV exported from `pyfirmata_servo.py` can be used directly as input.
 * Full Sweep - The extreme position in degrees the servo is capable of reaching (default: 270)
 * Minimum - The pulse with in microseconds to set the servo to the 0 position (default: 544)
 * Maximum - The pulse width in microseconds to set the servo to the extreme position (default: 2400)
-
-## gensketch.py (deprecated)
-
-Translates a CSV table into an Arduino sketch that performs the represented effects. The generated Arduino sketch uses Renaud Bédard's coroutine library to handle concurrent operation of multiple servos (https://github.com/renaudbedard/littlebits-arduino/tree/master/Libraries/Coroutines). See the header at the top of the code for details.
