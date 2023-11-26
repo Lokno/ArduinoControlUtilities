@@ -28,9 +28,6 @@ class BoardControl:
         self.board = None
         self.io = {}
 
-    def clamp(self, x, min_val, max_val):
-        return max(min_val, min(x, max_val))
-
     def connect(self,port,layout=None):
         if self.board is None:
             self.port = port
@@ -83,15 +80,11 @@ class BoardControl:
                     self.io[pin] = self.board.get_pin(f'a:{pin}:p')
 
             if io_type == 'servo':
-                self.io[pin].write(self.clamp(int(value),0,180))
-            elif io_type == 'digital':
-                self.io[pin].write(self.clamp(int(value),0,1))
-            elif io_type == 'analog':
-                self.io[pin].write(self.clamp(int(value),0,1))
-            elif io_type == 'digital_pwm':
-                self.io[pin].write(self.clamp(value,0.0,1.0))
-            elif io_type == 'analog_pwm':
-                self.io[pin].write(self.clamp(value,0.0,1.0))
+                self.io[pin].write(max(0, min(int(value), 180)))
+            elif io_type == 'digital' or io_type == 'analog':
+                self.io[pin].write(max(0, min(int(value), 1)))
+            elif io_type == 'digital_pwm' or io_type == 'analog_pwm':
+                self.io[pin].write(max(0, min(int(value), 255))/255.0)
 
 class WebSocketServer:
     def __init__(self):
@@ -179,18 +172,13 @@ class WebSocketServer:
             if isinstance(v,str):
                 values.append(v)
             elif isinstance(v,float):
-                values.append(str(int(v)))
+                values.append(str(max(0, min(int(v), 255))))
+            elif isinstance(v,int):
+                values.append(str(max(0, min(v, 255))))
             elif isinstance(v,bool):
                 values.append(str(int(v)))
             else:
                 values.append(str(v))
-
-        if 'port' in keys:
-            idx = keys.index('port')
-            keys = list(keys)
-            values = list(values)
-            keys.pop(idx)
-            values.pop(idx)
     
         if not os.path.exists(self.csv_file_name):
             with open(filename,'w') as f:
