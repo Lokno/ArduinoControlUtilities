@@ -47,7 +47,7 @@ unsigned long last_frame;
 unsigned long target_delta = 33;
 
 void setup() {
-    pinMode(6, OUTPUT);
+    pinMode(13, OUTPUT);
     accumLED = initLED;
     infoLED.xpos = infoLED.ypos = infoLED.zpos = 0;
 
@@ -61,7 +61,7 @@ void loop() {
         last_frame = millis();
 
         accumLED += next_value(valLED,zeroLED,&infoLED);
-        analogWrite(6, accumLED);
+        analogWrite(13, accumLED);
 
         frame++;
         if( frame >= frame_count )
