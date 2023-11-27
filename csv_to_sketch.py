@@ -372,15 +372,21 @@ class FileSelectorGUI:
         csv_file = self.csv_directory_text.get("1.0", "end-1c")
         output_directory = self.output_directory_text.get("1.0", "end-1c")
         output_filename = self.output_file_entry.get()
-        fps = self.fps_entry.get()
+        fps = self.fps_entry.get().strip()
 
         success,msg = validate_csv(csv_file,'CSV File')
         if success:
             success,msg = validate_dir(output_directory,'Output Directory')
             if success:
                 if not fps.isnumeric():
-                    msg = 'fps value is not a number'
+                    msg = 'fps value is not a positive number'
                     success = False
+                elif int(fps) == 0:
+                    msg = 'fps cannot be zero'
+                    success = False  
+                elif 1000 < int(fps):
+                    msg = 'fps cannot greater than 1000'
+                    success = False 
                 if success:
                     output_filename = create_path(output_directory,output_filename)
                     generate_arduino_sketch(csv_file, output_filename, int(fps))

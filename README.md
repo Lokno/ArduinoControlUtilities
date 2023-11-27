@@ -34,9 +34,7 @@ frame,pin_A,value_A,type_A,pin_B,value_B,type_B,...
   - Valid Types
     * servo       - A connected servo on the pin. Uses Arduino Servo library (valid values 0-180)
     * digital     - digital pin (D2,D3,..) for digital output (valid values 0-1)
-    * analog      - analog pin  (A0,A1,...) for digital output (valid values 0-1)
     * digital_pwm - digital pin (D2,D3,..) for pwm output (valid values 0-1)
-    * analog_pwm  - analog pin  (A0,A1,...) for pwm output (valid values 0-1)
    
 ## websocket_pyfirmata.py
 
@@ -64,9 +62,7 @@ Expects to receive the following data values:
   - Valid Types
     * servo       - A connected servo on the pin. Uses Arduino Servo library (valid values 0-180)
     * digital     - digital pin (D2,D3,..) for digital output (valid values 0-1)
-    * analog      - analog pin  (A0,A1,...) for digital output (valid values 0-1)
     * digital_pwm - digital pin (D2,D3,..) for pwm output (valid values 0-1)
-    * analog_pwm  - analog pin  (A0,A1,...) for pwm output (valid values 0-1)
 
 ## pyfirmata_servo.py
 

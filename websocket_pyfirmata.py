@@ -27,12 +27,21 @@ class BoardControl:
         self.port = None
         self.board = None
         self.io = {}
+        self.schema = {
+            'digital' : tuple(x for x in range(20)), # Use all analog pins: A0-A5(14-19).
+            'analog' : (), # Analog pins has been used as digital ones
+            'pwm' : (3, 5, 6, 9, 10, 11),
+            'use_ports' : True,
+            'disabled' : (0, 1) # Rx, Tx, Crystal
+        }
 
     def connect(self,port,layout=None):
         if self.board is None:
             self.port = port
             try:
-                self.board = pyfirmata.Arduino(self.port)
+                if layout is not None:
+                    self.schema = layout
+                self.board = pyfirmata.Board(self.port,layout=self.schema)
                 logging.info(f"Connected to {self.port}")
                 self.io = {}
             except serialutil.SerialException:
@@ -67,23 +76,24 @@ class BoardControl:
             value = io_attrib['value']
             io_type = io_attrib['type']
 
+            # we must demote a pin to pure digital output if pwm is not supported
+            if io_type == 'digital_pwm' and pin not in self.schema['pwm']:
+                io_type = 'digital'
+
             if pin not in self.io:
                 if io_type == 'servo':
                     self.io[pin] = self.board.get_pin(f'd:{pin}:s')
                 elif io_type == 'digital':
                     self.io[pin] = self.board.get_pin(f'd:{pin}:o')
-                elif io_type == 'analog':
-                    self.io[pin] = self.board.get_pin(f'a:{pin}:o')
+                    self.io[pin].mode = pyfirmata.OUTPUT
                 elif io_type == 'digital_pwm':
                     self.io[pin] = self.board.get_pin(f'd:{pin}:p')
-                elif io_type == 'analog_pwm':
-                    self.io[pin] = self.board.get_pin(f'a:{pin}:p')
 
             if io_type == 'servo':
                 self.io[pin].write(max(0, min(int(value), 180)))
-            elif io_type == 'digital' or io_type == 'analog':
+            elif io_type == 'digital':
                 self.io[pin].write(max(0, min(int(value), 1)))
-            elif io_type == 'digital_pwm' or io_type == 'analog_pwm':
+            elif io_type == 'digital_pwm':
                 self.io[pin].write(max(0, min(int(value), 255))/255.0)
 
 class WebSocketServer:
