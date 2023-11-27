@@ -179,17 +179,15 @@ class WebSocketServer:
 
         for key in keys:
             v = data[key]
-            if isinstance(v,str):
-                values.append(v)
-            elif isinstance(v,float):
+            if isinstance(v,float):
                 values.append(str(max(0, min(int(v), 255))))
-            elif isinstance(v,int):
-                values.append(str(max(0, min(v, 255))))
             elif isinstance(v,bool):
                 values.append(str(int(v)))
+            elif isinstance(v,int):
+                values.append(str(max(0, min(v, 255))))
             else:
                 values.append(str(v))
-    
+
         if not os.path.exists(self.csv_file_name):
             with open(filename,'w') as f:
                 f.write(','.join(keys) + '\n')
