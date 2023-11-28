@@ -4,7 +4,7 @@ Utilities designed to enable controlling GPIO output from a microcontroller with
 ## Utilities
 
 * csv_to_sketch.py - Translates a CSV table representing a sequence of GPIO output values to an Arduino Sketch
-* websocket_pyfirmata.py - Websocket server for controlling a microcontroller over serial using PyFirmata
+* websocket_connector.py - Websocket server for controlling a microcontroller over serial using PyFirmata
 * pyfirmata_servo.py - Live Control of a Servo via a GUI using pyFirmata
 * servo_sketch_generator.py - Translates a CSV table into an Arduino sketch that performs a series of servo sweeps
 
@@ -36,19 +36,21 @@ frame,pin_A,value_A,type_A,pin_B,value_B,type_B,...
     * digital     - digital pin (D2,D3,..) for digital output (valid values 0-1)
     * digital_pwm - digital pin (D2,D3,..) for pwm output (valid values 0-1)
    
-## websocket_pyfirmata.py
+## websocket_connector.py
 
 ![Screenshot 2023-11-25 230803](https://github.com/Lokno/ArduinoControlUtilities/assets/2483797/2bd1ce8a-f942-4cf3-91a0-d82e118efe5b)
 
-Creates a websocket server for interactively controlling a microcontroller over serial using PyFirmata.
+Creates a websocket server for interactively controlling a microcontroller over serial using PyFirmata or Telemetrix.
 Intended for use with Pixel Composer using the WebSocket Sender node: https://makham.itch.io/pixel-composer
 
 ### Dependencies
 * Python 3
 * appdirs
 * argparse
-* pyfirmata
 * tkinter (for GUI when opened without arguments)
+* pyfirmata (for PyFirmata option)
+* telemetrix (for Telemetrix option)
+* telemetrix_aio_esp32 (for TelemetrixAioEsp32 option)
 
 Expects to receive the following data values:
 
