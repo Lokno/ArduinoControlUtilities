@@ -5,12 +5,14 @@
 
 import asyncio
 import websockets
-import pyfirmata
 import json
 import platform
 import argparse
 import logging
 from serial import serialutil
+import sys
+
+import tracemalloc
 
 major,minor,_ = platform.python_version_tuple()
 if major != '3':
@@ -23,7 +25,7 @@ if minor >= '11':
         inspect.getargspec = inspect.getfullargspec
 
 class BoardControl:
-    def __init__(self):
+    def __init__(self,event_loop):
         self.port = None
         self.board = None
         self.io = {}
@@ -34,30 +36,69 @@ class BoardControl:
             'use_ports' : True,
             'disabled' : (0, 1) # Rx, Tx, Crystal
         }
+        self.module_name = "PyFirmata"
+        self.event_loop = event_loop
 
-    def connect(self,port,layout=None):
+    async def connect(self,port,module_name,layout=None):
         if self.board is None:
             self.port = port
+            self.module_name = module_name
+            try:
+                if self.module_name == "PyFirmata" and 'pyfirmata' not in sys.modules:
+                    global pyfirmata
+                    import pyfirmata
+                    logging.info('Imported PyFirmata')
+                elif self.module_name == "Telemetrix" and 'telemetrix' not in sys.modules:
+                    global telemetrix
+                    from telemetrix import telemetrix
+                elif self.module_name == "TelemetrixAioEsp32" and 'telemetrix_aio_esp32' not in sys.modules:
+                    global telemetrix_aio_esp32
+                    from telemetrix_aio_esp32 import telemetrix_aio_esp32
+            except:
+                logging.info(f"Failed to import module {self.module_name}")
+                return
+
             try:
                 if layout is not None:
                     self.schema = layout
-                self.board = pyfirmata.Board(self.port,layout=self.schema)
+
+                if self.module_name == "PyFirmata":
+                    self.board = pyfirmata.Board(self.port,layout=self.schema)
+                elif self.module_name == "Telemetrix":
+                    if port is not None:
+                        self.board = telemetrix.Telemetrix(port)
+                    else:
+                        self.board = telemetrix.Telemetrix()
+                        self.port = self.board.serial_port.port
+                elif self.module_name == "TelemetrixAioEsp32":
+                    self.board = telemetrix_aio_esp32.TelemetrixAioEsp32(transport_address=port,loop=self.event_loop,autostart=False)
+                    await self.board.start_aio()
+                    self.port = port
+
                 logging.info(f"Connected to {self.port}")
                 self.io = {}
-            except serialutil.SerialException:
-                logging.info(f"Failed to connect to {self.port}")
+            except Exception as connection_error:  
+                import traceback
+                traceback.print_exc()
+                logging.error(f"Failed to connect to {self.port}. Error: {str(connection_error)}")
                 self.board = None
 
-    def disconnect(self):
+    async def disconnect(self):
         if self.board is not None:
-            self.board.exit()
+            if self.module_name == "PyFirmata":
+                self.board.exit()
+            elif self.module_name == "Telemetrix":
+                self.board.shutdown()
+            elif self.module_name == "TelemetrixAioEsp32":
+                await self.board.shutdown()
+
             self.board = None
             self.io = {}
 
     def is_connected(self):
         return self.board is not None
 
-    def update(self, data):
+    async def update(self, data):
         if self.board is None:
             return
 
@@ -80,29 +121,66 @@ class BoardControl:
             if io_type == 'digital_pwm' and pin not in self.schema['pwm']:
                 io_type = 'digital'
 
-            if pin not in self.io:
-                if io_type == 'servo':
-                    self.io[pin] = self.board.get_pin(f'd:{pin}:s')
-                elif io_type == 'digital':
-                    self.io[pin] = self.board.get_pin(f'd:{pin}:o')
-                    self.io[pin].mode = pyfirmata.OUTPUT
-                elif io_type == 'digital_pwm':
-                    self.io[pin] = self.board.get_pin(f'd:{pin}:p')
+            if self.module_name == 'PyFirmata':
+                if pin not in self.io:
+                    if io_type == 'servo':
+                        self.io[pin] = self.board.get_pin(f'd:{pin}:s')
+                    elif io_type == 'digital':
+                        self.io[pin] = self.board.get_pin(f'd:{pin}:o')
+                        self.io[pin].mode = pyfirmata.OUTPUT
+                    elif io_type == 'digital_pwm':
+                        self.io[pin] = self.board.get_pin(f'd:{pin}:p')
 
-            if io_type == 'servo':
-                self.io[pin].write(max(0, min(int(value), 180)))
-            elif io_type == 'digital':
-                self.io[pin].write(max(0, min(int(value), 1)))
-            elif io_type == 'digital_pwm':
-                self.io[pin].write(max(0, min(int(value), 255))/255.0)
+                if io_type == 'servo':
+                    self.io[pin].write(max(0, min(int(value), 180)))
+                elif io_type == 'digital':
+                    self.io[pin].write(max(0, min(int(value), 1)))
+                elif io_type == 'digital_pwm' or io_type == 'pwm':
+                    self.io[pin].write(max(0, min(int(value), 255))/255.0)
+            elif self.module_name == 'Telemetrix':
+                if pin not in self.io:
+                    if io_type == 'servo':
+                        self.io[pin] = True
+                        self.board.set_pin_mode_servo(pin,544,2400)
+                    elif io_type == 'digital':
+                        self.io[pin] = True
+                        self.board.set_pin_mode_digital_output(pin)
+                    elif io_type == 'digital_pwm' or io_type == 'pwm':
+                        self.io[pin] = True
+                        self.board.set_pin_mode_analog_output(pin)
+
+                if io_type == 'servo':
+                    self.board.servo_write(pin, max(0, min(int(value), 180)))
+                elif io_type == 'digital':
+                    self.board.digital_write(pin, max(0, min(int(value), 1)))
+                elif io_type == 'digital_pwm' or io_type == 'pwm':
+                    self.board.analog_write(pin, max(0, min(int(value), 255))/255.0)
+            elif self.module_name == 'TelemetrixAioEsp32':
+                if pin not in self.io:
+                    if io_type == 'servo':
+                        self.io[pin] = True
+                        await self.board.set_pin_mode_servo(pin,544,2400)
+                    elif io_type == 'digital':
+                        self.io[pin] = True
+                        await self.board.set_pin_mode_digital_output(pin)
+                    elif io_type == 'digital_pwm' or io_type == 'pwm':
+                        self.io[pin] = True
+                        await self.board.set_pin_mode_analog_output(pin)
+
+                if io_type == 'servo':
+                    await self.board.servo_write(pin, max(0, min(int(value), 180)))
+                elif io_type == 'digital':
+                    await self.board.digital_write(pin, max(0, min(int(value), 1)))
+                elif io_type == 'digital_pwm' or io_type == 'pwm':
+                    await self.board.analog_write(pin, max(0, min(int(value), 255))/255.0)
 
 class WebSocketServer:
-    def __init__(self):
+    def __init__(self,event_loop):
         self.host = "127.0.0.1"
         self.port = 22300
         self.server = None
         self.connected_clients = set()
-        self.board_ctrl = BoardControl()
+        self.board_ctrl = BoardControl(event_loop)
         self.write_csv = False
         self.csv_file_name = None
 
@@ -120,7 +198,7 @@ class WebSocketServer:
             async for message in websocket:
                 logging.debug(message)
                 data = json.loads(message)
-                self.board_ctrl.update(data)
+                await self.board_ctrl.update(data)
 
                 if self.write_csv:
                     self.write_csv_row(self.csv_file_name,data)
@@ -153,11 +231,11 @@ class WebSocketServer:
     def enable_csv(self, enable):
         self.write_csv = enable
 
-    def connect(self, port, layout=None):
-         self.board_ctrl.connect(port, layout)
+    async def connect(self, port, module_name, layout=None):
+         await self.board_ctrl.connect(port, module_name, layout)
 
-    def disconnect(self):
-        self.board_ctrl.disconnect()
+    async def disconnect(self):
+        await self.board_ctrl.disconnect()
 
     def is_connected(self):
         return self.board_ctrl.is_connected()
@@ -202,9 +280,9 @@ class WebSocketServer:
 class WebSocketGUI:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Websocket PyFirmata")
+        self.root.title("Websocket Connector")
 
-        self.app_name = "WebsocketPyFirmata"
+        self.app_name = "WebsocketConnector"
         self.app_author = "Lokno"
 
         config_data = self.load_config()
@@ -213,7 +291,8 @@ class WebSocketGUI:
             config_data['csv_file'] = ''
             config_data['host'] = "127.0.0.1"
             config_data['port'] = '22300'
-            config_data['comm_port'] = ''
+            config_data['module_attrib'] = ''
+            config_data['module_name'] = 'PyFirmata'
 
         # Host and Port Entry
         self.server_frame = tk.Frame(self.root)
@@ -238,14 +317,21 @@ class WebSocketGUI:
         # Mircocontroller
         self.controller_frame = tk.Frame(self.root)
         self.controller_frame.grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
-        self.comm_port_label = tk.Label(self.controller_frame, text="Serial Port:")
+        self.comm_port_label = tk.Label(self.controller_frame, text="Serial Port:" if config_data['module_name'] != 'TelemetrixAioEsp32' else 'IP Address:')
         self.comm_port_label.pack(side="left")
         self.comm_port_entry = tk.Entry(self.controller_frame)
         self.comm_port_entry.pack(side="left", padx=5)
-        self.comm_port_entry.insert("end",config_data['comm_port'])
+        self.comm_port_entry.insert("end",config_data['module_attrib'])
 
         self.connect_button = tk.Button(self.controller_frame, text="Connect", command=self.connect)
         self.connect_button.pack(side="left", padx=5)
+
+        self.controller_module_name = tk.StringVar() 
+        self.controller_module_name.trace_add("write", self.module_changed) 
+        self.controller_module_name.set( config_data['module_name'] ) 
+
+        self.controller_module_name_dropdown = tk.OptionMenu( self.controller_frame, self.controller_module_name , 'PyFirmata', 'Telemetrix', 'TelemetrixAioEsp32' ) 
+        self.controller_module_name_dropdown.pack(side="left", padx=5)
 
         # CSV File Entry and Browse Button
         self.csv_frame = tk.Frame(self.root)
@@ -271,19 +357,22 @@ class WebSocketGUI:
         self.message_text = tk.Label(self.root, height=1, width=40)
         self.message_text.grid(row=3, column=0, columnspan=2, pady=5)
 
-        self.server = WebSocketServer()
+        self.event_loop = asyncio.get_event_loop()
+        asyncio.set_event_loop(self.event_loop)
+
+        self.server = WebSocketServer(self.event_loop)
         self.server.set_host(config_data['host'])
         self.server.set_port(config_data['port'])
         self.server.set_csv_file(config_data['csv_file'])
         self.server.enable_csv(False)
-
-        self.event_loop = asyncio.get_event_loop()
 
         self.showing = True
 
         self.re_host = re.compile("([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+|localhost)")
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+        self.request_connection_change = False
 
     def update_status(self, message, is_error=False):
         self.message_text.config(text=message)
@@ -311,6 +400,33 @@ class WebSocketGUI:
     async def show(self):
         while self.showing:
             self.root.update()
+
+            if self.request_connection_change:
+                self.request_connection_change = False
+
+                if self.server.is_connected():
+                    await self.server.disconnect()
+                    self.connect_button["text"] = 'Connect'
+                    self.update_status('Disconnected')
+                    self.controller_module_name_dropdown['state'] = tk.NORMAL
+                else:
+                    comm_port = self.comm_port_entry.get().strip()
+                    module_name = self.controller_module_name.get()
+                    if module_name == 'Telemetrix' or comm_port != '':
+                        if comm_port == '':
+                            comm_port = None
+                        await self.server.connect(comm_port,module_name)
+                        if self.server.is_connected():
+                            self.connect_button["text"] = 'Disconnect'
+                            self.controller_module_name_dropdown['state'] = tk.DISABLED
+                            self.update_status('Connected Successfully')
+                        else:
+                            self.update_status('Connection Failed', True)
+                    else:
+                        self.update_status(f'{"Serial Port" if module_name == "PyFirmata" else "IP Address"} Cannot Be Empty', True)
+
+                self.connect_button['state'] = tk.NORMAL
+
             await asyncio.sleep(0.1)
 
     def start_stop_server(self):
@@ -336,21 +452,8 @@ class WebSocketGUI:
             self.run_button["text"] = 'Start Server'
 
     def connect(self):
-        if self.server.is_connected():
-            self.server.disconnect()
-            self.connect_button["text"] = 'Connect'
-            self.update_status('Disconnected')
-        else:
-            comm_port = self.comm_port_entry.get().strip()
-            if comm_port != '':
-                self.server.connect(comm_port)
-                if self.server.is_connected():
-                    self.connect_button["text"] = 'Disconnect'
-                    self.update_status('Connected Successfully')
-                else:
-                    self.update_status('Connection Failed', True)
-            else:
-                self.update_status('Empty Serial Port', True)
+        self.request_connection_change = True
+        self.connect_button['state'] = tk.DISABLED
 
     def checkbox_changed(self, *args):
         if self.enable_csv_var.get() == 1:
@@ -360,6 +463,13 @@ class WebSocketGUI:
         else:
             logging.debug("CSV Output Disabled")
             self.server.enable_csv(False)
+
+    def module_changed(self, *args):
+        module_name = self.controller_module_name.get()
+        if module_name == 'TelemetrixAioEsp32':
+            self.comm_port_label["text"] = 'IP Address:'
+        else:
+            self.comm_port_label["text"] = 'Serial Port:'
 
     def on_closing(self):
         if self.server.is_running():
@@ -371,7 +481,8 @@ class WebSocketGUI:
             'csv_file': self.csv_entry.get(),
             'host': self.host_entry.get(),
             'port': self.port_entry.get(),
-            'comm_port' : self.comm_port_entry.get(),
+            'module_attrib' : self.comm_port_entry.get().strip(),
+            'module_name' : self.controller_module_name.get(),
             })
 
         self.root.destroy()
@@ -386,14 +497,17 @@ class WebSocketGUI:
         logging.debug("Clear CSV button pressed")
         self.server.clear_csv()
 
-    async def run_tk(self):
-        try:
-            await self.show();
-        finally:
-            self.event_loop.close()
+#    async def run_tk(self):
+#        try:
+#            await self.show();
+#        finally:
+#            self.event_loop.close()
+#
+#    def run(self):
+#        asyncio.run(self.run_tk())
 
     def run(self):
-        asyncio.run(self.run_tk())
+        self.event_loop.run_until_complete(self.show())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Websocket Server to directly control the GPIO output of a microcontroller")
@@ -406,6 +520,8 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--serial", nargs="?", help="serial port of microcontroller")
     
     args = parser.parse_args()
+
+    tracemalloc.start()
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
