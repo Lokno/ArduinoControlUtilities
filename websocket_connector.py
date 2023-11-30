@@ -415,7 +415,7 @@ class WebSocketGUI:
                     if module_name == 'Telemetrix' or comm_port != '':
                         if comm_port == '':
                             comm_port = None
-                        await self.server.connect(comm_port,module_name)
+                        await self.server.connect(comm_port,module_name,self.load_board_schema())
                         if self.server.is_connected():
                             self.connect_button["text"] = 'Disconnect'
                             self.controller_module_name_dropdown['state'] = tk.DISABLED
@@ -497,14 +497,17 @@ class WebSocketGUI:
         logging.debug("Clear CSV button pressed")
         self.server.clear_csv()
 
-#    async def run_tk(self):
-#        try:
-#            await self.show();
-#        finally:
-#            self.event_loop.close()
-#
-#    def run(self):
-#        asyncio.run(self.run_tk())
+    def load_board_schema(self):
+        board_schema = None
+        if os.path.exists("board_schema.json"):
+            with open("board_schema.json","r") as f:
+                schema_file = f.read()
+            try:
+                board_schema = json.loads(schema_file)
+            except json.decoder.JSONDecodeError:
+                logging.info("Error loading board_schema.json.")
+                logging.info("Using default board layout...")
+        return board_schema
 
     def run(self):
         self.event_loop.run_until_complete(self.show())
