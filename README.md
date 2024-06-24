@@ -7,6 +7,7 @@ Utilities designed to enable controlling GPIO output from a microcontroller with
 * websocket_connector.py - Websocket server for controlling a microcontroller over serial using PyFirmata
 * pyfirmata_servo.py - Live Control of a Servo via a GUI using pyFirmata
 * servo_sketch_generator.py - Translates a CSV table into an Arduino sketch that performs a series of servo sweeps
+* convert_lightshow.py - Interprets a ShowXpress lightshow project as an Arduino sketch that controls a neopixel LED strip
 
 ## csv_to_sketch.py
 
