@@ -334,7 +334,7 @@ uint16_t stack_pos;
 
 bool in_stack(uint16_t idx) {{
     bool found = false;
-    for(uint16_t i = 0u; i < SCENE_COUNT; ++i)
+    for(uint16_t i = 0u; i <= stack_pos; ++i)
     {{
         if( stack[i] == idx )
         {{
@@ -347,20 +347,25 @@ bool in_stack(uint16_t idx) {{
 }}
 
 void push_stack(uint16_t idx) {{
-    if( stack_pos < (SCENE_COUNT-1u) ) stack[stack_pos++] = idx;
+    if( stack_pos < (SCENE_COUNT-1u) ) stack[++stack_pos] = idx;
 }}
 
 uint16_t peek_stack() {{
     return stack[stack_pos];
 }}
 
-uint16_t remove_stack(uint16_t idx) {{
+void remove_stack(uint16_t idx) {{
     bool found = false;
-    for(uint16_t i = 1u; i < (SCENE_COUNT-1); ++i)
+    if( stack[stack_pos] == idx ) found = true;
+    else
     {{
-        if( stack[i] == idx ) found = true;
-        if( found ) stack[i] = stack[i+1];
+        for(uint16_t i = 1u; i < stack_pos; ++i)
+        {{
+            if( stack[i] == idx ) found = true;
+            if( found ) stack[i] = stack[i+1];
+        }}
     }}
+    if( found ) stack_pos--;
 }}
 
 uint16_t pop_stack() {{
@@ -394,6 +399,13 @@ void init_state() {{
     for(uint16_t i = 0u; i < SCENE_COUNT; ++i)
     {{
         if( scenes[i].pin != 0u ) scenes[i].button = new LoknoButton(scenes[i].pin, 50, true, true);
+    }}
+}}
+
+void store_state() {{
+    for(uint16_t i = 0u; i < LED_COUNT; ++i)
+    {{
+        start_state.color[i].value = strip.getPixelColor(i);
     }}
 }}
 
@@ -433,13 +445,6 @@ void update() {{
     }}
 
     strip.show();
-}}
-
-void store_state() {{
-    for(uint16_t i = 0u; i < LED_COUNT; ++i)
-    {{
-        start_state.color[i].value = strip.getPixelColor(i);
-    }}
 }}
 
 void check_scene_switch()
