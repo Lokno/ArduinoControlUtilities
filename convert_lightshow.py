@@ -347,7 +347,7 @@ bool in_stack(uint16_t idx) {{
 }}
 
 void push_stack(uint16_t idx) {{
-    if( stack_pos < (SCENE_COUNT-1u) && !in_stack(idx) ) stack[stack_pos++] = idx;
+    if( stack_pos < (SCENE_COUNT-1u) ) stack[stack_pos++] = idx;
 }}
 
 uint16_t peek_stack() {{
@@ -444,12 +444,14 @@ void store_state() {{
 
 void check_scene_switch()
 {{
+
+    // if running a scene triggered by input, check if the input has been released
     if( current_scene != start_up_scene && scenes[current_scene].button != NULL && scenes[current_scene].button->wasReleased() )
     {{
         input_released = true;
     }}
 
-    // Removed released scenes from stack
+    // removed released triggers from stack
     for(uint16_t i = 1u; i < stack_pos; ++i)
     {{
         if( scenes[stack[i]].button != NULL && scenes[stack[i]].button->wasReleased() )
@@ -458,41 +460,40 @@ void check_scene_switch()
         }}
     }}
 
-    for(uint16_t i = 0u; i < SCENE_COUNT; ++i)
+    // add pressed triggers to stack
+    bool new_scene = false;
+    for(uint16_t i = 1u; i < SCENE_COUNT; ++i)
     {{
-        if( current_scene != i && scenes[i].button != NULL && scenes[i].button->wasPressed() && !in_stack(i) )
+        if( i != current_scene && scenes[i].button != NULL && scenes[i].button->wasPressed() && !in_stack(i) )
         {{
-            store_state();
-            fade_duration = scenes[i].fade_in;
-            current_scene = i;
-            push_stack(current_scene);
-            current_step = 0u;
-            fade = true;
-            first_loop = true;
-            input_released = false;
-            start = millis();
-            break;
+            push_stack(i);
+            new_scene = true;
         }}
     }}
 
-    if( input_released && !first_loop )
+    // start newly triggered scene
+    if( new_scene )
     {{
-        uint16_t next_scene = pop_stack(); // pop released scene
-        next_scene = pop_stack(); // pop next scene
-
-        // pop until a scene is still pressed
-        //do
-        //{{
-        //    next_scene = pop_stack();
-        //}}
-        //while( scenes[next_scene].button != NULL && !scenes[next_scene].button->isPressed() );
-
         store_state();
-        fade_duration = scenes[current_scene].fade_out;
-        current_scene = next_scene;
-        push_stack(current_scene);
+        current_scene = peek_stack();
+        fade_duration = scenes[current_scene].fade_in;
         current_step = 0u;
         fade = true;
+        first_loop = true;
+        input_released = false;
+        start = millis();
+    }}
+    else if( input_released && !first_loop ) // handle releasing a triggered scene
+    {{
+        store_state();
+
+        pop_stack(); // pop released scene
+        
+        fade_duration = scenes[current_scene].fade_out;
+        current_scene = peek_stack();
+        current_step = 0u;
+        fade = true;
+        first_loop = true;
         input_released = false;
         start = millis();
     }}
