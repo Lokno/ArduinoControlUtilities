@@ -211,16 +211,9 @@ class DirectoryDropdownApp:
                             else:
                                 colors[i] = prev_colors[i]
 
-                    #print(max_address)
-
-                    #for idx,col in enumerate(colors):
-                    #    print(f'    colors[{idx}] = ({str(colors[idx])})')
-
                     prev_colors = colors
 
                     icolors = [0] * (max_address+1)
-
-                    #print(max_address+1)
 
                     for k,v in colors.items():
                         icolors[k] = str(self.convert_wrgb_to_int(0,*v)) + 'u'
@@ -230,7 +223,7 @@ class DirectoryDropdownApp:
                 max_steps = max(max_steps,len(step_out_data))
 
                 # add to output scenes
-                scene_out_data.append({'steps': step_out_data, 'count': len(step_out_data), 'pin' : self.trigger_pins[si]})
+                scene_out_data.append({'steps': step_out_data, 'count': len(step_out_data), 'pin' : self.trigger_pins[si], 'fade_in' : self.fade_values[si][0], 'fade_out' : self.fade_values[si][1]})
 
                 if is_startup:
                     start_up_scene = len(scene_out_data)-1
@@ -284,6 +277,8 @@ class DirectoryDropdownApp:
         }},
         .count = {scene['count']}u,
         .pin = {pin}u,
+        .fade_in = {scene['fade_in']}u,
+        .fade_out = {scene['fade_out']}u,
         .button = NULL
     }},'''
 
@@ -310,6 +305,8 @@ typedef struct {{
     State steps[MAX_STEPS];
     uint32_t count;
     uint32_t pin;
+    uint32_t fade_in;
+    uint32_t fade_out;
     LoknoButton* button;
 }} Scene;
 
@@ -319,10 +316,12 @@ Scene scenes[SCENE_COUNT] = {{
 {scene_str}
 }};
 
-uint16_t current_scene = 0u;
-uint16_t current_step = 0u;
-uint32_t start = millis();
-
+uint16_t current_scene;
+uint16_t current_step;
+uint16_t start_up_scene;
+uint32_t start;
+bool fade;
+uint32_t fade_duration;
 State start_state;
 
 uint8_t lerp(uint8_t a, uint8_t b, uint32_t elapsed, uint32_t period) {{
@@ -336,8 +335,11 @@ uint8_t lerp(uint8_t a, uint8_t b, uint32_t elapsed, uint32_t period) {{
 }}
 
 void init_state() {{
-    current_scene = 0u;
+    start_up_scene = {0 if start_up_scene is None else start_up_scene}u;
+    current_scene = start_up_scene;
     current_step = 0u;
+    fade = true;
+    fade_duration = scenes[current_scene].fade_in;
     start = millis();
     strip.begin();
 
@@ -350,7 +352,7 @@ void init_state() {{
 void update() {{
     uint32_t elapsed = millis()-start;
 
-    uint32_t step_length = scenes[current_scene].steps[current_step].length;
+    uint32_t step_length = fade ? fade_duration : scenes[current_scene].steps[current_step].length;
 
     for(uint16_t i = 0u; i < LED_COUNT; ++i)
     {{
@@ -370,6 +372,7 @@ void update() {{
     if( elapsed > step_length ) 
     {{
         current_step = (current_step+1u) % scenes[current_scene].count;
+        fade = false;
         store_state();
         start = millis();
     }}
@@ -393,6 +396,8 @@ void check_scene_switch()
             store_state();
             current_scene = i;
             current_step = 0u;
+            fade = true;
+            fade_duration = i == start_up_scene ? scenes[current_scene].fade_out : scenes[i].fade_in;
             start = millis();
         }}
     }}
@@ -409,7 +414,7 @@ void loop() {{
 }}
 '''
         if last_directory != base_file_name:
-            os.mkdir(os.path.join( output_directory, base_file_name))
+            os.makedirs(os.path.join( output_directory, base_file_name), exist_ok=True)
 
         with open(output_path,'w') as fout:
             fout.write(file_str)
@@ -460,25 +465,48 @@ void loop() {{
             self.pin_entries[idx].config(state='normal')
             self.pin_labels[idx].config(state='normal')
 
-    def validate_pin_value(self, s):
-        valid = False
-        if s.strip() == '' or (s.isdigit() and len(s) < 4):
-            valid = True
-        return valid
+    def parse_int(self, s, max_length, min_value, max_value, default):
+        if s.isdigit() and len(s) <= max_length:
+            return max(min(int(s),max_value),min_value)
+        else:
+            return default
+
+    def parse_flt(self, s, max_length, min_value, max_value, default):
+        if s.replace('.', '', 1).isdigit() and len(s) <= max_length:
+            return max(min(float(s),max_value),min_value),True
+        else:
+            return default,False
 
     def on_pin_entry_change(self, idx):
         try:
-            value = self.trigger_vars[idx].get()
-            if(self.validate_pin_value(value) and value):
-                self.trigger_pins[idx] = int(value)
-            elif value == '':
-                self.trigger_vars[idx].set('')
-                self.trigger_pins[idx] = -1
-            elif self.trigger_pins[idx] > -1:
-                self.trigger_vars[idx].set(str(self.trigger_pins[idx]))
+            value = self.parse_int(self.trigger_vars[idx].get(), 2, 0, 99, -1)
+            self.trigger_pins[idx] = value
+            if value > -1:
+                self.trigger_vars[idx].set(str(value))
             else:
                 self.trigger_vars[idx].set('')
-            print(f"Entry value changed to: {self.trigger_pins[idx]}")
+            print(f"Pin Entry value changed to: {self.trigger_pins[idx]}")
+        except ValueError:
+            print("Invalid entry, not an integer")
+
+    def on_fade_in_entry_change(self, idx):
+        try:
+            value,valid = self.parse_flt(self.fade_vars[idx][0].get(), 11, 0.0, 4294967.295, 0.0)
+            self.fade_values[idx][0] = int(value * 1000.0)
+            if not valid: 
+                self.fade_vars[idx][0].set('')
+            print(f"Fade In Entry value changed to: {self.fade_values[idx][0]}")
+        except ValueError:
+            print("Invalid entry, not an integer")
+
+    def on_fade_out_entry_change(self, idx):
+        try:
+            value,valid = self.parse_flt(self.fade_vars[idx][1].get(), 11, 0.0, 4294967.295, 0.0)
+            self.fade_values[idx][1] = int(value * 1000.0)
+
+            if not valid:
+                self.fade_vars[idx][1].set('')
+            print(f"Fade Out Entry value changed to: {self.fade_values[idx][1]}")
         except ValueError:
             print("Invalid entry, not an integer")
 
@@ -509,6 +537,8 @@ void loop() {{
                 self.trigger_pins = []
                 self.pin_labels = []
                 self.scene_data = []
+                self.fade_vars = []
+                self.fade_values = []
                 idx = 0
 
                 for i, scene_file in enumerate(scene_files):
@@ -522,8 +552,12 @@ void loop() {{
 
                     cb_var = tk.BooleanVar()
                     pin_var = tk.StringVar()
+                    fade_in_var = tk.StringVar()
+                    fade_out_var = tk.StringVar()
                     cb_var.trace_add("write", lambda *args, idx=idx: self.on_checkbutton_change(idx))
                     pin_var.trace_add("write", lambda *args, idx=idx: self.on_pin_entry_change(idx))
+                    fade_in_var.trace_add("write", lambda *args, idx=idx: self.on_fade_in_entry_change(idx))
+                    fade_out_var.trace_add("write", lambda *args, idx=idx: self.on_fade_out_entry_change(idx))
 
                     idx += 1
                     scene_checkbox = tk.Checkbutton(scene_frame, text='Startup Scene', variable=cb_var)
@@ -535,11 +569,28 @@ void loop() {{
                     pin_label = ttk.Label(scene_frame, text='Trigger Pin')
                     pin_label.grid(row=0, column=3, padx=5, pady=2, sticky='w')
 
+                    fade_in_entry = tk.Entry(scene_frame, textvariable=fade_in_var, width=6, justify='right')
+                    fade_in_entry.grid(row=0, column=4, padx=5, pady=2, sticky='w')
+
+                    fade_in_label = ttk.Label(scene_frame, text='Fade In')
+                    fade_in_label.grid(row=0, column=5, padx=5, pady=2, sticky='w')
+
+                    fade_out_entry = tk.Entry(scene_frame, textvariable=fade_out_var, width=6, justify='right')
+                    fade_out_entry.grid(row=0, column=6, padx=5, pady=2, sticky='w')
+
+                    fade_out_label = ttk.Label(scene_frame, text='Fade Out')
+                    fade_out_label.grid(row=0, column=7, padx=5, pady=2, sticky='w')
+
                     self.checkbox_vars.append(cb_var)
                     self.trigger_vars.append(pin_var)
                     self.trigger_pins.append(-1)
                     self.pin_labels.append(pin_label)
                     self.pin_entries.append(scene_pin_entry)
+                    self.fade_vars.append([fade_in_var,fade_out_var])
+                    self.fade_values.append([1000,1000])
+
+                    fade_in_var.set('1.0')
+                    fade_out_var.set('1.0')
 
                     self.scene_data.append({'path' : scene_file, 'idx' : i})
 
