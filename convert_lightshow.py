@@ -321,8 +321,52 @@ uint16_t current_step;
 uint16_t start_up_scene;
 uint32_t start;
 bool fade;
+bool first_loop;
+bool input_released;
 uint32_t fade_duration;
 State start_state;
+
+// Scene Stack
+uint16_t stack[SCENE_COUNT];
+uint16_t stack_pos;
+
+// Stack Operations
+
+bool in_stack(uint16_t idx) {{
+    bool found = false;
+    for(uint16_t i = 0u; i < SCENE_COUNT; ++i)
+    {{
+        if( stack[i] == idx )
+        {{
+            found = true;
+            break;        
+        }}
+    }}
+
+    return found;
+}}
+
+void push_stack(uint16_t idx) {{
+    if( stack_pos < (SCENE_COUNT-1u) && !in_stack(idx) ) stack[stack_pos++] = idx;
+}}
+
+uint16_t peek_stack() {{
+    return stack[stack_pos];
+}}
+
+uint16_t remove_stack(uint16_t idx) {{
+    bool found = false;
+    for(uint16_t i = 1u; i < (SCENE_COUNT-1); ++i)
+    {{
+        if( stack[i] == idx ) found = true;
+        if( found ) stack[i] = stack[i+1];
+    }}
+}}
+
+uint16_t pop_stack() {{
+    if( stack_pos > 0u ) return stack[stack_pos--];
+    else return stack[0u];
+}}
 
 uint8_t lerp(uint8_t a, uint8_t b, uint32_t elapsed, uint32_t period) {{
     uint32_t result = b;
@@ -338,7 +382,11 @@ void init_state() {{
     start_up_scene = {0 if start_up_scene is None else start_up_scene}u;
     current_scene = start_up_scene;
     current_step = 0u;
+    stack_pos = 0u;
+    stack[0] = start_up_scene;
     fade = true;
+    first_loop = true;
+    input_released = false;
     fade_duration = scenes[current_scene].fade_in;
     start = millis();
     strip.begin();
@@ -369,9 +417,16 @@ void update() {{
          strip.setPixelColor(i, v.value);
     }}
 
-    if( elapsed > step_length ) 
+    if( elapsed > step_length && (first_loop || !input_released) ) 
     {{
-        current_step = (current_step+1u) % scenes[current_scene].count;
+        current_step++;
+
+        if( current_step >= scenes[current_scene].count ) 
+        {{
+            current_step = 0;
+            first_loop = false;
+        }}
+             
         fade = false;
         store_state();
         start = millis();
@@ -389,17 +444,57 @@ void store_state() {{
 
 void check_scene_switch()
 {{
+    if( current_scene != start_up_scene && scenes[current_scene].button != NULL && scenes[current_scene].button->wasReleased() )
+    {{
+        input_released = true;
+    }}
+
+    // Removed released scenes from stack
+    for(uint16_t i = 1u; i < stack_pos; ++i)
+    {{
+        if( scenes[stack[i]].button != NULL && scenes[stack[i]].button->wasReleased() )
+        {{
+            remove_stack(stack[i--]);
+        }}
+    }}
+
     for(uint16_t i = 0u; i < SCENE_COUNT; ++i)
     {{
-        if( current_scene != i && scenes[i].button != NULL && scenes[i].button->wasPressed() )
+        if( current_scene != i && scenes[i].button != NULL && scenes[i].button->wasPressed() && !in_stack(i) )
         {{
             store_state();
+            fade_duration = scenes[i].fade_in;
             current_scene = i;
+            push_stack(current_scene);
             current_step = 0u;
             fade = true;
-            fade_duration = i == start_up_scene ? scenes[current_scene].fade_out : scenes[i].fade_in;
+            first_loop = true;
+            input_released = false;
             start = millis();
+            break;
         }}
+    }}
+
+    if( input_released && !first_loop )
+    {{
+        uint16_t next_scene = pop_stack(); // pop released scene
+        next_scene = pop_stack(); // pop next scene
+
+        // pop until a scene is still pressed
+        //do
+        //{{
+        //    next_scene = pop_stack();
+        //}}
+        //while( scenes[next_scene].button != NULL && !scenes[next_scene].button->isPressed() );
+
+        store_state();
+        fade_duration = scenes[current_scene].fade_out;
+        current_scene = next_scene;
+        push_stack(current_scene);
+        current_step = 0u;
+        fade = true;
+        input_released = false;
+        start = millis();
     }}
 }}
 
