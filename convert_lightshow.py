@@ -265,10 +265,11 @@ class DirectoryDropdownApp:
                  .length = {step['length']}u
              }},  
 '''
-
+            button_str = 'NULL'
             pin = 0
             if scene['pin'] > 0:
                 pin = scene['pin']
+                button_str = f'new LoknoButton({pin}, 50, true, true)'
 
             scene_str += f'''
     {{
@@ -276,10 +277,9 @@ class DirectoryDropdownApp:
 {step_str}
         }},
         .count = {scene['count']}u,
-        .pin = {pin}u,
         .fade_in = {scene['fade_in']}u,
         .fade_out = {scene['fade_out']}u,
-        .button = new LoknoButton({pin}, 50, true, true)
+        .button = {button_str}
     }},'''
 
         file_str = f'''
@@ -304,7 +304,6 @@ typedef struct {{
 typedef struct {{
     State steps[MAX_STEPS];
     uint32_t count;
-    uint32_t pin;
     uint32_t fade_in;
     uint32_t fade_out;
     LoknoButton* button;
