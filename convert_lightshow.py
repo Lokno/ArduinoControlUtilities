@@ -279,7 +279,7 @@ class DirectoryDropdownApp:
         .pin = {pin}u,
         .fade_in = {scene['fade_in']}u,
         .fade_out = {scene['fade_out']}u,
-        .button = NULL
+        .button = new LoknoButton({pin}, 50, true, true)
     }},'''
 
         file_str = f'''
@@ -326,7 +326,8 @@ bool input_released;
 uint32_t fade_duration;
 State start_state;
 
-// Scene Stack
+// Stack Globals
+
 uint16_t stack[SCENE_COUNT];
 uint16_t stack_pos;
 
@@ -339,7 +340,7 @@ bool in_stack(uint16_t idx) {{
         if( stack[i] == idx )
         {{
             found = true;
-            break;        
+            break;
         }}
     }}
 
@@ -395,11 +396,6 @@ void init_state() {{
     fade_duration = scenes[current_scene].fade_in;
     start = millis();
     strip.begin();
-
-    for(uint16_t i = 0u; i < SCENE_COUNT; ++i)
-    {{
-        if( scenes[i].pin != 0u ) scenes[i].button = new LoknoButton(scenes[i].pin, 50, true, true);
-    }}
 }}
 
 void store_state() {{
