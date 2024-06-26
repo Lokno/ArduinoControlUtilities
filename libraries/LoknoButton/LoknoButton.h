@@ -1,3 +1,5 @@
+#pragma once
+
 class LoknoButton {
 public:
     LoknoButton(int pin, int debounce_time, bool pullup_enable, bool active_low)

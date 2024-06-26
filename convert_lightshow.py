@@ -374,6 +374,8 @@ uint16_t pop_stack() {{
     else return stack[0u];
 }}
 
+// End Stack Operations
+
 uint8_t lerp(uint8_t a, uint8_t b, uint32_t elapsed, uint32_t period) {{
     uint32_t result = b;
     if (period > 0 && elapsed < period)
